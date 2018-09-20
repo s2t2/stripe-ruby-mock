@@ -156,7 +156,7 @@ shared_examples 'Plan API' do
       end
 
       #it("requires a name") { @name = :name } # @deprecated
-      it("requires an amount") { @name = :amount }
+      it("requires an amount") { @name = :amount } # @deprecated
       it("requires a currency") { @name = :currency }
       it("requires an interval") { @name = :interval }
     end
