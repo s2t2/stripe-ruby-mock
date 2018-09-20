@@ -3,7 +3,7 @@ require 'spec_helper'
 shared_examples 'Plan API' do
 
   let(:plan_attributes) { {
-    :id => 'pid_1',
+    :id => 'plan_1',
     :product => 'prod_abc123',
     :name => 'The Mock Plan',
     :amount => 9900,
@@ -16,10 +16,13 @@ shared_examples 'Plan API' do
     :trial_period_days => 30
   } }
 
+  let(:product) { stripe_helper.create_product(id: plan_attributes[:product], name: "My Product") }
+
   it "creates a stripe plan" do
+    product
     plan = Stripe::Plan.create(plan_attributes)
 
-    expect(plan.id).to eq('pid_1')
+    expect(plan.id).to eq('plan_1')
     expect(plan.name).to eq('The Mock Plan')
     expect(plan.amount).to eq(9900)
 
@@ -32,19 +35,20 @@ shared_examples 'Plan API' do
     expect(plan.trial_period_days).to eq(30)
   end
 
-
   it "creates a stripe plan without specifying ID" do
     idless_attributes = plan_attributes.merge({id: nil})
     expect(idless_attributes[:id]).to be_nil
 
+    Stripe::Product.create(id: idless_attributes[:product], name: "My Product")
     plan = Stripe::Plan.create(idless_attributes)
     expect(plan.id).to match(/^test_plan_1/)
   end
 
   it "stores a created stripe plan in memory" do
+    Stripe::Product.create(id: "prod_SHARED", name: "Product w/ Many Plans")
     plan = Stripe::Plan.create(
       :id => 'pid_2',
-      :product => 'prod_222',
+      :product => "prod_SHARED",
       :name => 'The Second Plan',
       :amount => 1100,
       :currency => 'USD',
@@ -52,7 +56,7 @@ shared_examples 'Plan API' do
     )
     plan2 = Stripe::Plan.create(
       :id => 'pid_3',
-      :product => 'prod_333',
+      :product => "prod_SHARED",
       :name => 'The Third Plan',
       :amount => 7777,
       :currency => 'USD',
@@ -66,18 +70,17 @@ shared_examples 'Plan API' do
     expect(data[plan2.id][:amount]).to eq(7777)
   end
 
-
   it "retrieves a stripe plan" do
-    original = stripe_helper.create_plan(amount: 1331)
+    original = stripe_helper.create_plan(amount: 1331, product: product.id)
     plan = Stripe::Plan.retrieve(original.id)
 
     expect(plan.id).to eq(original.id)
     expect(plan.amount).to eq(original.amount)
+    expect(plan.product).to eq("prod_abc123")
   end
 
-
   it "updates a stripe plan" do
-    stripe_helper.create_plan(id: 'super_member', amount: 111)
+    stripe_helper.create_plan(id: 'super_member', product: product.id, amount: 111)
 
     plan = Stripe::Plan.retrieve('super_member')
     expect(plan.amount).to eq(111)
@@ -88,7 +91,6 @@ shared_examples 'Plan API' do
     expect(plan.amount).to eq(789)
   end
 
-
   it "cannot retrieve a stripe plan that doesn't exist" do
     expect { Stripe::Plan.retrieve('nope') }.to raise_error {|e|
       expect(e).to be_a Stripe::InvalidRequestError
@@ -98,7 +100,7 @@ shared_examples 'Plan API' do
   end
 
   it "deletes a stripe plan" do
-    stripe_helper.create_plan(id: 'super_member', amount: 111)
+    stripe_helper.create_plan(id: 'super_member', product: product.id, amount: 111)
 
     plan = Stripe::Plan.retrieve('super_member')
     expect(plan).to_not be_nil
@@ -113,8 +115,8 @@ shared_examples 'Plan API' do
   end
 
   it "retrieves all plans" do
-    stripe_helper.create_plan(id: 'Plan One', amount: 54321)
-    stripe_helper.create_plan(id: 'Plan Two', amount: 98765)
+    stripe_helper.create_plan(id: 'Plan One', product: product.id, amount: 54321)
+    stripe_helper.create_plan(id: 'Plan Two', product: product.id, amount: 98765)
 
     all = Stripe::Plan.all
     expect(all.count).to eq(2)
@@ -124,7 +126,7 @@ shared_examples 'Plan API' do
 
   it 'retrieves plans with limit' do
     101.times do | i|
-      stripe_helper.create_plan(id: "Plan #{i}", amount: 11)
+      stripe_helper.create_plan(id: "Plan #{i}", product: product.id, amount: 11)
     end
     all = Stripe::Plan.all(limit: 100)
 
@@ -159,9 +161,24 @@ shared_examples 'Plan API' do
       it("requires an interval") { @name = :interval }
     end
 
+    describe "Association" do
+      it "validates associated Product" do
+        stripe_helper.delete_plan(plan_attributes[:id])
+        stripe_helper.delete_product(plan_attributes[:product])
+
+        expect {
+          Stripe::Plan.create(plan_attributes)
+        }.to raise_error {|e|
+          expect(e).to be_a(Stripe::InvalidRequestError)
+          expect(e.message).to eq("No such product: prod_abc123")
+        }
+      end
+    end
+
     describe "Uniqueness" do
 
       it "validates for uniqueness" do
+        stripe_helper.create_product(id: params[:product], name: "My Product")
         stripe_helper.delete_plan(params[:id])
 
         Stripe::Plan.create(params)

@@ -158,6 +158,7 @@ module StripeMock
 
     private
 
+    # @example assert_existence(:customer, customer_id, customers[customer_id] )
     def assert_existence(type, id, obj, message=nil)
       if obj.nil?
         msg = message || "No such #{type}: #{id}"

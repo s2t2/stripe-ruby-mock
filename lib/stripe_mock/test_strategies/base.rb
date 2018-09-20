@@ -15,9 +15,7 @@ module StripeMock
         currency = params[:currency] || StripeMock.default_currency
         {
           :id => 'stripe_mock_default_plan_id',
-          :product => {
-            :name => 'StripeMock Default Plan ID'
-          },
+          :product => 'prod_111',
           :amount => 1337,
           :currency => currency,
           :interval => 'month'

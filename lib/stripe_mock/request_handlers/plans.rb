@@ -13,6 +13,10 @@ module StripeMock
       def new_plan(route, method_url, params, headers)
         params[:id] ||= new_id('plan')
         validate_create_plan_params(params)
+
+        product_id = params[:product]
+        assert_existence(:product, product_id, products[product_id] )
+
         plans[ params[:id] ] = Data.mock_plan(params)
       end
 
