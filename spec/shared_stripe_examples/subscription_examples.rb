@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'spec_helper'
 
 shared_examples 'Customer Subscriptions' do
 
@@ -8,22 +9,30 @@ shared_examples 'Customer Subscriptions' do
 
   context "creating a new subscription" do
     let(:plan_attrs) { {
-      id: 'silver',
-      product: { name: 'Silver Plan' },
+      id: 'sub_SILVER',
+      product: "prod_SILVER",
       amount: 4999,
       currency: 'usd'
     } }
+    let(:product) { stripe_helper.create_product(id: plan_attrs[:product], name: 'Silver Product') }
+    let(:plan) { stripe_helper.create_plan(plan_attrs) }
+    let(:customer) { Stripe::Customer.create(source: gen_card_tk) }
+    let(:subscription) { Stripe::Subscription.create( {
+      plan: plan.id,
+      customer: customer.id,
+      metadata: { foo: "bar", example: "yes" }
+    } ) }
 
     it "adds a new subscription to customer with none using items", :live => true do
-      plan = stripe_helper.create_plan(plan_attrs)
-      customer = Stripe::Customer.create(source: gen_card_tk)
-
+      product
+      plan
+      customer
       expect(customer.subscriptions.data).to be_empty
       expect(customer.subscriptions.count).to eq(0)
 
       subscription = Stripe::Subscription.create({
         customer: customer.id,
-        items: [{ plan: 'silver' }],
+        items: [{ plan: plan.id }],
         metadata: { foo: "bar", example: "yes" }
       })
 
@@ -32,105 +41,104 @@ shared_examples 'Customer Subscriptions' do
       expect(subscription.metadata.foo).to eq("bar")
       expect(subscription.metadata.example).to eq("yes")
 
-      customer = Stripe::Customer.retrieve(customer.id)
-      expect(customer.subscriptions.data).to_not be_empty
-      expect(customer.subscriptions.count).to eq(1)
-      expect(customer.subscriptions.data.length).to eq(1)
-      expect(customer.charges.data.length).to eq(1)
-      expect(customer.currency).to eq("usd")
+      find_customer = Stripe::Customer.retrieve(customer.id)
+      expect(find_customer.subscriptions.data).to_not be_empty
+      expect(find_customer.subscriptions.count).to eq(1)
+      expect(find_customer.subscriptions.data.length).to eq(1)
+      expect(find_customer.charges.data.length).to eq(1)
+      expect(find_customer.currency).to eq("usd")
 
-      expect(customer.subscriptions.data.first.id).to eq(subscription.id)
-      expect(customer.subscriptions.data.first.plan.to_hash).to eq(plan.to_hash)
-      expect(customer.subscriptions.data.first.customer).to eq(customer.id)
-      expect(customer.subscriptions.data.first.metadata.foo).to eq( "bar" )
-      expect(customer.subscriptions.data.first.metadata.example).to eq( "yes" )
+      expect(find_customer.subscriptions.data.first.id).to eq(subscription.id)
+      expect(find_customer.subscriptions.data.first.plan.to_hash).to eq(plan.to_hash)
+      expect(find_customer.subscriptions.data.first.customer).to eq(customer.id)
+      expect(find_customer.subscriptions.data.first.metadata.foo).to eq( "bar" )
+      expect(find_customer.subscriptions.data.first.metadata.example).to eq( "yes" )
     end
 
     it "adds a new subscription to customer with none", :live => true do
-      plan = stripe_helper.create_plan(id: 'silver', product: { name: 'Silver Plan' },
-                                       amount: 4999, currency: 'usd')
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      product
+      plan
 
+      customer
       expect(customer.subscriptions.data).to be_empty
       expect(customer.subscriptions.count).to eq(0)
 
-      sub = Stripe::Subscription.create({ plan: 'silver', customer: customer.id, metadata: { foo: "bar", example: "yes" } })
+      subscription
+      expect(subscription.object).to eq('subscription')
+      expect(subscription.plan.to_hash).to eq(plan.to_hash)
+      expect(subscription.metadata.foo).to eq( "bar" )
+      expect(subscription.metadata.example).to eq( "yes" )
 
-      expect(sub.object).to eq('subscription')
-      expect(sub.plan.to_hash).to eq(plan.to_hash)
-      expect(sub.metadata.foo).to eq( "bar" )
-      expect(sub.metadata.example).to eq( "yes" )
+      find_customer = Stripe::Customer.retrieve(customer.id)
+      expect(find_customer.subscriptions.data).to_not be_empty
+      expect(find_customer.subscriptions.count).to eq(1)
+      expect(find_customer.subscriptions.data.length).to eq(1)
+      expect(find_customer.charges.data.length).to eq(1)
+      expect(find_customer.currency).to eq( "usd" )
 
-      customer = Stripe::Customer.retrieve(customer.id)
-      expect(customer.subscriptions.data).to_not be_empty
-      expect(customer.subscriptions.count).to eq(1)
-      expect(customer.subscriptions.data.length).to eq(1)
-      expect(customer.charges.data.length).to eq(1)
-      expect(customer.currency).to eq( "usd" )
-
-      expect(customer.subscriptions.data.first.id).to eq(sub.id)
-      expect(customer.subscriptions.data.first.plan.to_hash).to eq(plan.to_hash)
-      expect(customer.subscriptions.data.first.customer).to eq(customer.id)
-      expect(customer.subscriptions.data.first.billing).to eq('charge_automatically')
-      expect(customer.subscriptions.data.first.metadata.foo).to eq( "bar" )
-      expect(customer.subscriptions.data.first.metadata.example).to eq( "yes" )
+      expect(find_customer.subscriptions.data.first.id).to eq(subscription.id)
+      expect(find_customer.subscriptions.data.first.plan.to_hash).to eq(plan.to_hash)
+      expect(find_customer.subscriptions.data.first.customer).to eq(customer.id)
+      expect(find_customer.subscriptions.data.first.billing).to eq('charge_automatically')
+      expect(find_customer.subscriptions.data.first.metadata.foo).to eq( "bar" )
+      expect(find_customer.subscriptions.data.first.metadata.example).to eq( "yes" )
     end
 
     it 'when customer object provided' do
-      plan = stripe_helper.create_plan(id: 'silver', product: { name: 'Silver Plan' }, amount: 4999, currency: 'usd')
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      product
+      plan
 
+      customer
       expect(customer.subscriptions.data).to be_empty
       expect(customer.subscriptions.count).to eq(0)
 
-      sub = Stripe::Subscription.create({ plan: 'silver', customer: customer, metadata: { foo: "bar", example: "yes" } })
+      subscription
+      expect(subscription.object).to eq('subscription')
+      expect(subscription.plan.to_hash).to eq(plan.to_hash)
+      expect(subscription.billing).to eq('charge_automatically')
+      expect(subscription.metadata.foo).to eq( "bar" )
+      expect(subscription.metadata.example).to eq( "yes" )
 
-      expect(sub.object).to eq('subscription')
-      expect(sub.plan.to_hash).to eq(plan.to_hash)
-      expect(sub.billing).to eq('charge_automatically')
-      expect(sub.metadata.foo).to eq( "bar" )
-      expect(sub.metadata.example).to eq( "yes" )
+      find_customer = Stripe::Customer.retrieve(customer.id)
+      expect(find_customer.subscriptions.data).to_not be_empty
+      expect(find_customer.subscriptions.count).to eq(1)
+      expect(find_customer.subscriptions.data.length).to eq(1)
+      expect(find_customer.charges.data.length).to eq(1)
+      expect(find_customer.currency).to eq( "usd" )
 
-      customer = Stripe::Customer.retrieve(customer.id)
-      expect(customer.subscriptions.data).to_not be_empty
-      expect(customer.subscriptions.count).to eq(1)
-      expect(customer.subscriptions.data.length).to eq(1)
-      expect(customer.charges.data.length).to eq(1)
-      expect(customer.currency).to eq( "usd" )
+      expect(find_customer.subscriptions.data.first.id).to eq(subscription.id)
+      expect(find_customer.subscriptions.data.first.plan.to_hash).to eq(plan.to_hash)
 
-      expect(customer.subscriptions.data.first.id).to eq(sub.id)
-      expect(customer.subscriptions.data.first.plan.to_hash).to eq(plan.to_hash)
-
-      expect(customer.subscriptions.data.first.customer).to eq(customer.id)
-      expect(customer.subscriptions.data.first.billing).to eq('charge_automatically')
-      expect(customer.subscriptions.data.first.metadata.foo).to eq( "bar" )
-      expect(customer.subscriptions.data.first.metadata.example).to eq( "yes" )
+      expect(find_customer.subscriptions.data.first.customer).to eq(customer.id)
+      expect(find_customer.subscriptions.data.first.billing).to eq('charge_automatically')
+      expect(find_customer.subscriptions.data.first.metadata.foo).to eq( "bar" )
+      expect(find_customer.subscriptions.data.first.metadata.example).to eq( "yes" )
     end
 
     it "adds a new subscription to customer (string/symbol agnostic)" do
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
       expect(customer.subscriptions.count).to eq(0)
 
-      plan = stripe_helper.create_plan(id: :silver, product: { name: 'Silver Plan' },
-                                       amount: 4999, currency: 'usd')
-      sub = Stripe::Subscription.create({ plan: 'silver', customer: customer.id })
-      customer = Stripe::Customer.retrieve(customer.id)
-      expect(sub.plan.to_hash).to eq(plan.to_hash)
-      expect(customer.subscriptions.count).to eq(1)
+      product
+      plan
+      subscription
+      find_customer = Stripe::Customer.retrieve(customer.id)
+      expect(subscription.plan.to_hash).to eq(plan.to_hash)
+      expect(find_customer.subscriptions.count).to eq(1)
 
-      plan = stripe_helper.create_plan(id: 'gold', product: { name: 'Gold Plan' },
-                                       amount: 14999, currency: 'usd')
-      sub = Stripe::Subscription.create({ plan: 'gold', customer: customer.id })
-      customer = Stripe::Customer.retrieve(customer.id)
-      expect(sub.plan.to_hash).to eq(plan.to_hash)
-      expect(customer.subscriptions.count).to eq(2)
+      gold_product = stripe_helper.create_product(id: :prod_GOLD, name: 'Gold Plan') # purposefully using symbol identifier here
+      gold_plan = stripe_helper.create_plan(id: 'plan_GOLD', product: gold_product.id, amount: 14999, currency: 'usd')
+      gold_subscription = Stripe::Subscription.create({ plan: gold_plan.id, customer: customer.id })
+      find_customer = Stripe::Customer.retrieve(customer.id)
+      expect(gold_subscription.plan.to_hash).to eq(gold_plan.to_hash)
+      expect(find_customer.subscriptions.count).to eq(2)
     end
 
     it 'creates a charge for the customer', live: true do
       stripe_helper.create_plan(id: 'silver', product: { name: 'Silver Plan' },
                                 amount: 4999)
 
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
       Stripe::Subscription.create({ plan: 'silver', customer: customer.id, metadata: { foo: "bar", example: "yes" } })
       customer = Stripe::Customer.retrieve(customer.id)
 
@@ -142,7 +150,7 @@ shared_examples 'Customer Subscriptions' do
       plan = stripe_helper.create_plan(id: 'plan_with_coupon', product: { name: 'One More Test Plan' },
                                        amount: 777)
       coupon = stripe_helper.create_coupon(id: 'free_coupon', duration: 'repeating', duration_in_months: 3)
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
       Stripe::Subscription.create(plan: plan.id, customer: customer.id, coupon: coupon.id)
       customer = Stripe::Customer.retrieve(customer.id)
 
@@ -156,7 +164,7 @@ shared_examples 'Customer Subscriptions' do
     it 'when coupon is not exist', live: true do
       plan = stripe_helper.create_plan(id: 'plan_with_coupon', product: { name: 'One More Test Plan' },
                                        amount: 777)
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
 
       expect { Stripe::Subscription.create(plan: plan.id, customer: customer.id, coupon: 'none') }.to raise_error {|e|
                                expect(e).to be_a Stripe::InvalidRequestError
@@ -186,7 +194,7 @@ shared_examples 'Customer Subscriptions' do
     end
 
     it "correctly sets created when it's not provided as a parameter", live: true do
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
       plan = stripe_helper.create_plan(id: 'silver', product: { name: 'Silver Plan' },
                                        amount: 4999, currency: 'usd')
       subscription = Stripe::Subscription.create({ plan: 'silver', customer: customer.id })
@@ -195,7 +203,7 @@ shared_examples 'Customer Subscriptions' do
     end
 
     it "correctly sets created when it's provided as a parameter" do
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
       plan = stripe_helper.create_plan(id: 'silver', product: { name: 'Silver Plan' },
                                        amount: 4999, currency: 'usd')
       subscription = Stripe::Subscription.create({ plan: 'silver', customer: customer.id, created: 1473576318 })
@@ -284,7 +292,7 @@ shared_examples 'Customer Subscriptions' do
 
     it 'when attempting to create a new subscription with the params trial', live: true do
       plan = stripe_helper.create_plan(id: 'trial', amount: 999)
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
 
       expect{ Stripe::Subscription.create(plan: plan.id, customer: customer.id, trial: 10) }.to raise_error {|e|
         expect(e).to be_a Stripe::InvalidRequestError
@@ -421,7 +429,7 @@ shared_examples 'Customer Subscriptions' do
 
     it 'overrides current period end when billing cycle anchor is set' do
       plan = stripe_helper.create_plan(id: 'plan', amount: 999)
-      customer = Stripe::Customer.create(source: gen_card_tk)
+      customer
       billing_cycle_anchor = Time.now.utc.to_i + 3600
 
       sub = Stripe::Subscription.create({ plan: 'plan', customer: customer.id, billing_cycle_anchor: billing_cycle_anchor })
