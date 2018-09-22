@@ -25,4 +25,5 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency 'rubygems-tasks', '~> 0.2'
   gem.add_development_dependency 'thin', '~> 1.6.4'
   gem.add_development_dependency 'pry', '~> 0.11'
+  gem.add_development_dependency 'dotenv', '~> 2.5'
 end

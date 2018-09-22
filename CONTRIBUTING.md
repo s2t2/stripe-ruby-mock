@@ -31,6 +31,7 @@ Start developing:
 ```sh
 client = StripeMock.start_client
 # etc.
+client.get_server_data(:products)
 ```
 
 ## Testing
