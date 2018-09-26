@@ -4,22 +4,21 @@ shared_examples 'Plan API' do
   let(:product_attributes){ {id: "prod_abc123", name: "My Mock Product", type: "service"} }
   let(:product) { Stripe::Product.create(product_attributes) }
   let(:plan_attributes) { {
-    :id => 'prod_abc123',
+    :id => "plan_abc123",
     :product => product_attributes[:id],
-    :nickname => 'My Mock Plan',
+    :nickname => "My Mock Plan",
     :amount => 9900,
-    :currency => 'usd',
-    :interval => 1,
-    :metadata => {
-      :description => "desc text",
-      :info => "info text"
-    },
-    :trial_period_days => 30
+    :currency => "usd",
+    :interval => "month",
+
   } }
-  let(:idless_attributes){ plan_attributes.merge({id: nil}) }
+  let(:plan_attributes_without_id){ plan_attributes.merge({id: nil}) }
+  let(:plan_without_id){ Stripe::Plan.create(plan_attributes_without_id) }
   let(:plan) { Stripe::Plan.create(plan_attributes) }
-  # let(:plan_with_trial) { }
-  # let(:plan_with_metadata)
+  let(:plan_attributes_with_trial) { plan_attributes.merge({:trial_period_days => 30}) }
+  let(:plan_with_trial) { Stripe::Plan.create(plan_attributes_with_trial) }
+  let(:plan_attributes_with_metadata) { plan_attributes.merge({:description => "desc text", :info => "info text"}) }
+  let(:plan_with_metadata) { Stripe::Plan.create(plan_attributes_with_metadata) }
 
   it "creates a stripe plan" do
     expect(plan.id).to eq('prod_abc123')
@@ -29,16 +28,15 @@ shared_examples 'Plan API' do
     expect(plan.currency).to eq('usd')
     expect(plan.interval).to eq(1)
 
-    expect(plan.metadata.description).to eq('desc text')
-    expect(plan.metadata.info).to eq('info text')
+    expect(plan_with_metadata.metadata.description).to eq('desc text')
+    expect(plan_with_metadata.metadata.info).to eq('info text')
 
-    expect(plan.trial_period_days).to eq(30)
+    expect(plan_with_trial.trial_period_days).to eq(30)
   end
 
   it "creates a stripe plan without specifying ID" do
-    expect(idless_attributes[:id]).to be_nil
-    plan = Stripe::Plan.create(idless_attributes)
-    expect(plan.id).to match(/^test_plan_1/)
+    expect(plan_attributes_without_id[:id]).to be_nil
+    expect(plan_without_id.id).to match(/^test_plan_1/)
   end
 
   it "stores a created stripe plan in memory" do

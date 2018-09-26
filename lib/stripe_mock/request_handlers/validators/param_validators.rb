@@ -6,8 +6,8 @@ module StripeMock
         "#{obj_class.to_s.split("::").last} already exists."
       end
 
-      def not_found_message(obj_name, obj_id)
-        "No such #{obj_name.to_s.downcase}: #{obj_id}"
+      def not_found_message(obj_class, obj_id)
+        "No such #{obj_class.to_s.split("::").last.downcase}: #{obj_id}"
       end
 
       def missing_param_message(attr_name)
