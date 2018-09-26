@@ -111,7 +111,7 @@ shared_examples 'Invoice API' do
     let(:coupon_amtoff) { stripe_helper.create_coupon(id: '100OFF', currency: 'usd', amount_off: 100_00, duration: 'repeating', duration_in_months: 6) }
     let(:coupon_pctoff) { stripe_helper.create_coupon(id: '50%OFF', currency: 'usd', percent_off: 50, amount_off: nil, duration: 'repeating', duration_in_months: 6) }
     let(:product)       { stripe_helper.find_or_create_product(id: "prod_123") }
-    let(:plan)          { stripe_helper.create_plan(id: '50m', product: product.id, amount: 50_00, interval: 'month', name: '50m', currency: 'usd') }
+    let(:plan)          { stripe_helper.create_plan(id: '50m', product: product.id, amount: 50_00, interval: 'month', nickname: '50m', currency: 'usd') }
     let(:quantity)      { 3 }
     let(:subscription)  { Stripe::Subscription.create(plan: plan.id, customer: customer.id, quantity: quantity) }
 
@@ -249,9 +249,9 @@ shared_examples 'Invoice API' do
 
       [false, true].each do |with_trial|
         describe "prorating a subscription with a new plan, with_trial: #{with_trial}" do
-          let(:new_monthly_plan) { stripe_helper.create_plan(id: '100m', product: product.id, amount: 100_00, interval: 'month', name: '100m', currency: 'usd') }
-          let(:new_yearly_plan) { stripe_helper.create_plan(id: '100y', product: product.id, amount: 100_00, interval: 'year', name: '100y', currency: 'usd') }
-          let(:plan) { stripe_helper.create_plan(id: '50m', product: product.id, amount: 50_00, interval: 'month', name: '50m', currency: 'usd') }
+          let(:new_monthly_plan) { stripe_helper.create_plan(id: '100m', product: product.id, amount: 100_00, interval: 'month', nickname: '100m', currency: 'usd') }
+          let(:new_yearly_plan) { stripe_helper.create_plan(id: '100y', product: product.id, amount: 100_00, interval: 'year', nickname: '100y', currency: 'usd') }
+          let(:plan) { stripe_helper.create_plan(id: '50m', product: product.id, amount: 50_00, interval: 'month', nickname: '50m', currency: 'usd') }
 
           it 'prorates while maintaining billing interval', live: true do
             # Given
