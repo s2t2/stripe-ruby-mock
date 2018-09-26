@@ -6,9 +6,9 @@ shared_examples 'Plan API' do
   let(:plan_attributes) { {
     :id => 'prod_abc123',
     :product => product_attributes[:id],
-    :name => 'My Mock Plan',
+    :nickname => 'My Mock Plan',
     :amount => 9900,
-    :currency => 'USD',
+    :currency => 'usd',
     :interval => 1,
     :metadata => {
       :description => "desc text",
@@ -18,17 +18,15 @@ shared_examples 'Plan API' do
   } }
   let(:idless_attributes){ plan_attributes.merge({id: nil}) }
   let(:plan) { Stripe::Plan.create(plan_attributes) }
-
-  #before(:each) do
-  #  product
-  #end
+  # let(:plan_with_trial) { }
+  # let(:plan_with_metadata)
 
   it "creates a stripe plan" do
     expect(plan.id).to eq('prod_abc123')
-    expect(plan.name).to eq('My Mock Plan')
+    expect(plan.nickname).to eq('My Mock Plan')
     expect(plan.amount).to eq(9900)
 
-    expect(plan.currency).to eq('USD')
+    expect(plan.currency).to eq('usd')
     expect(plan.interval).to eq(1)
 
     expect(plan.metadata.description).to eq('desc text')
@@ -38,9 +36,7 @@ shared_examples 'Plan API' do
   end
 
   it "creates a stripe plan without specifying ID" do
-    idless_attributes = plan_attributes.merge({id: nil})
     expect(idless_attributes[:id]).to be_nil
-
     plan = Stripe::Plan.create(idless_attributes)
     expect(plan.id).to match(/^test_plan_1/)
   end
@@ -132,11 +128,25 @@ shared_examples 'Plan API' do
     expect(all.count).to eq(100)
   end
 
-  describe "Validation", :live => true do
+  describe "Validations", :live => true do
     let(:params) { stripe_helper.create_plan_params }
     let(:subject) { Stripe::Plan.create(params) }
 
-    describe "Required Parameters" do
+    class MyValidator # :-D
+      include StripeMock::RequestHandlers::ParamValidators
+    end
+
+    let(:validator) { MyValidator.new }
+
+    describe "Associations" do
+      let(:not_found_message) { validator.not_found_message(Stripe::Plan, plan_attributes[:product]) }
+
+      it "validates associated product" do
+        expect { plan }.to raise_error(Stripe::InvalidRequestError, not_found_message)
+      end
+    end
+
+    describe "Presence" do
       after do
         params.delete(@name)
         message =
@@ -155,45 +165,46 @@ shared_examples 'Plan API' do
     end
 
     describe "Inclusion" do
-      let(:invalid_currency_message) {
-        ""
-      }
+      let(:invalid_interval) { "OOPS" }
+      let(:invalid_interval_message) { validator.invalid_plan_interval_message }
 
       it "validates inclusion of interval in a supported list'" do
         expect {
-          Stripe::Product.create(params.merge({interval: "OOPS"}))
-        }.to raise_error(Stripe::InvalidRequestError, "Invalid interval: must be one of month, year, week, or day")
+          Stripe::Plan.create( params.merge({interval: invalid_interval}) )
+        }.to raise_error(Stripe::InvalidRequestError, invalid_interval_message)
       end
+
+      let(:invalid_currency) { "OOPS" }
+      let(:invalid_currency_message) { validator.invalid_currency_message(invalid_currency) }
 
       it "validates inclusion of currency in a supported list" do
         expect {
-          Stripe::Product.create(params.merge({currency: "OOPS"}))
+          Stripe::Plan.create( params.merge({currency: invalid_currency}) )
         }.to raise_error(Stripe::InvalidRequestError, invalid_currency_message)
       end
     end
 
-    describe "Integer" do
+    describe "Numericality" do
+      let(:invalid_integer) { 99.99 }
+      let(:invalid_integer_message) { validator.invalid_integer_message(invalid_integer)}
+
       it 'validates amount is an integer' do
         expect {
-          Stripe::Plan.create(plan_attributes.merge({amount: 99.99}))
-        }.to raise_error(Stripe::InvalidRequestError, "Invalid integer: 99.99")
-      end
-    end
-
-    describe "Associations" do
-      it "validates associated product" do
-        expect { plan }.to raise_error(Stripe::InvalidRequestError, "Invalid integer: 99.99")
+          Stripe::Plan.create( plan_attributes.merge({amount: invalid_integer}) )
+        }.to raise_error(Stripe::InvalidRequestError, invalid_integer_message)
       end
     end
 
     describe "Uniqueness" do
+      let(:already_exists_message) { validator.already_exists_message(Stripe::Plan) }
+
       it "validates for uniqueness" do
         stripe_helper.delete_plan(params[:id])
 
         Stripe::Plan.create(params)
         expect {
           Stripe::Plan.create(params)
-        }.to raise_error(Stripe::InvalidRequestError, "Plan already exists.")
+        }.to raise_error(Stripe::InvalidRequestError, already_exists_message)
       end
     end
 

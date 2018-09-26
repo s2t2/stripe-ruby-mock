@@ -503,7 +503,7 @@ module StripeMock
         interval_count: 1,
         livemode: false,
         metadata: {},
-        name: "The Basic Plan",
+        nickname: "My Mock Plan",
         statement_descriptor: nil,
         trial_period_days: nil
       }.merge(params)

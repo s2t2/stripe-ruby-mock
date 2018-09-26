@@ -101,7 +101,7 @@ shared_examples "Product API" do
     describe "Required Parameters" do
       after do
         params.delete(@attribute_name)
-        message = "Missing required param: #{@attribute_name}."
+        message = "Missing required param: #{@attribute_name}." # validator.missing_param_message(@attribute_name)
         expect { subject }.to raise_error(Stripe::InvalidRequestError, message)
       end
 
@@ -113,7 +113,7 @@ shared_examples "Product API" do
       it "validates inclusion of type in 'good' or 'service'" do
         expect {
           Stripe::Product.create(params.merge({type: "OOPS"}))
-        }.to raise_error(Stripe::InvalidRequestError, "Invalid type: must be one of good or service")
+        }.to raise_error(Stripe::InvalidRequestError, "Invalid type: must be one of good or service") # validator.invalid_product_type_message
       end
     end
 
@@ -124,7 +124,7 @@ shared_examples "Product API" do
         Stripe::Product.create(params)
         expect {
           Stripe::Product.create(params)
-        }.to raise_error(Stripe::InvalidRequestError, "Product already exists.")
+        }.to raise_error(Stripe::InvalidRequestError, "Product already exists.") # validator.already_exists_message(Stripe::Product)
       end
     end
   end

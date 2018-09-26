@@ -2,20 +2,56 @@ module StripeMock
   module RequestHandlers
     module ParamValidators
 
-      SUPPORTED_CURRENCIES = ["usd","aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd",
-                          "bdt", "bgn", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "bzd", "cad", "cdf", "chf",
-                          "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp", "etb", "eur",
-                          "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "hrk", "htg",
-                          "huf", "idr", "ils", "inr", "isk", "jmd", "jpy", "kes", "kgs", "khr", "kmf", "krw", "kyd",
-                          "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga", "mkd", "mmk", "mnt", "mop",
-                          "mro", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio", "nok", "npr", "nzd",
-                          "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar",
-                          "sbd", "scr", "sek", "sgd", "shp", "sll", "sos", "srd", "std", "svc", "szl", "thb", "tjs",
-                          "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs", "vnd", "vuv", "wst", "xaf",
-                          "xcd", "xof", "xpf", "yer", "zar", "zmw", "eek", "lvl", "vef"]
+      def already_exists_message(obj_class)
+        "#{obj_class.to_s.split("::").last} already exists."
+      end
 
-      def invalid_currency_message(my_val)
-        "Invalid currency: #{my_val.downcase}. Stripe currently supports these currencies: #{SUPPORTED_CURRENCIES.join(", ")}"
+      def not_found_message(obj_name, obj_id)
+        "No such #{obj_name.to_s.downcase}: #{obj_id}"
+      end
+
+      def missing_param_message(attr_name)
+        "Missing required param: #{attr_name}."
+      end
+
+      def invalid_integer_message(my_val)
+        "Invalid integer: #{my_val}"
+      end
+
+      #
+      # ProductValidator
+      #
+
+      SUPPORTED_PRODUCT_TYPES = ["good", "service"]
+
+      def invalid_product_type_message
+        "Invalid type: must be one of good or service"
+      end
+
+      def validate_create_product_params(params)
+        params[:id] = params[:id].to_s
+
+        @base_strategy.create_product_params.keys.reject{ |k,_| k == :id }.each do |k|
+          raise Stripe::InvalidRequestError.new(missing_param_message(k), k) if params[k].nil?
+        end
+
+        if !SUPPORTED_PRODUCT_TYPES.include?(params[:type])
+          raise Stripe::InvalidRequestError.new(invalid_product_type_message, :type)
+        end
+
+        if products[ params[:id] ]
+          raise Stripe::InvalidRequestError.new(already_exists_message(Stripe::Product), :id)
+        end
+      end
+
+      #
+      # PlanValidator
+      #
+
+      SUPPORTED_PLAN_INTERVALS = ["month", "year", "week", "day"]
+
+      def invalid_plan_interval_message
+        "Invalid interval: must be one of month, year, week, or day"
       end
 
       def validate_create_plan_params(params)
@@ -32,30 +68,40 @@ module StripeMock
         end
 
         if plans[ params[:id] ]
-          raise Stripe::InvalidRequestError.new("Plan already exists.", :id)
+          raise Stripe::InvalidRequestError.new(already_exists_message(Stripe::Plan), :id)
         end
 
         unless params[:amount].integer?
-          raise Stripe::InvalidRequestError.new("Invalid integer: #{params[:amount]}", :amount)
+          raise Stripe::InvalidRequestError.new(invalid_integer_message(params[:amount]), :amount)
         end
       end
 
-      def validate_create_product_params(params)
-        params[:id] = params[:id].to_s
+      SUPPORTED_CURRENCIES = ["usd","aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd",
+                          "bdt", "bgn", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "bzd", "cad", "cdf", "chf",
+                          "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp", "etb", "eur",
+                          "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "hrk", "htg",
+                          "huf", "idr", "ils", "inr", "isk", "jmd", "jpy", "kes", "kgs", "khr", "kmf", "krw", "kyd",
+                          "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga", "mkd", "mmk", "mnt", "mop",
+                          "mro", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio", "nok", "npr", "nzd",
+                          "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar",
+                          "sbd", "scr", "sek", "sgd", "shp", "sll", "sos", "srd", "std", "svc", "szl", "thb", "tjs",
+                          "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs", "vnd", "vuv", "wst", "xaf",
+                          "xcd", "xof", "xpf", "yer", "zar", "zmw", "eek", "lvl", "vef"
+                        ]
 
-        @base_strategy.create_product_params.keys.reject{ |k,_| k == :id }.each do |k|
-          message = "Missing required param: #{k}."
-          raise Stripe::InvalidRequestError.new(message, k) if params[k].nil?
-        end
-
-        if !["good", "service"].include?(params[:type])
-          raise Stripe::InvalidRequestError.new("Invalid type: must be one of good or service", :type)
-        end
-
-        if products[ params[:id] ]
-          raise Stripe::InvalidRequestError.new("Product already exists.", :id)
-        end
+      def invalid_currency_message(my_val)
+        "Invalid currency: #{my_val.downcase}. Stripe currently supports these currencies: #{SUPPORTED_CURRENCIES.join(", ")}"
       end
+
+      def missing_plan_amount_message
+        "Plans require an `amount` parameter to be set."
+      end
+
+
+
+
+
+
 
     end
   end

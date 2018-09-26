@@ -16,7 +16,7 @@ module StripeMock
           :id => 'stripe_mock_default_plan_id',
           :product => {
             :name => 'StripeMock Default Plan ID'
-          },
+          }, # :product => "prod_abc123",
           :amount => 1337,
           :currency => currency,
           :interval => 'month'
