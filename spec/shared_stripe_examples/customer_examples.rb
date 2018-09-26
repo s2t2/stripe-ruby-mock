@@ -1,6 +1,8 @@
 require 'spec_helper'
 
 shared_examples 'Customer API' do
+  let(:product_id){ "prod_CCC" }
+  let(:product) { Stripe::Product.create(id: product_id, name: "My Product", type: "service") }
 
   def gen_card_tk
     stripe_helper.generate_card_token
@@ -79,7 +81,7 @@ shared_examples 'Customer API' do
   end
 
   it 'creates a customer with a plan' do
-    plan = stripe_helper.create_plan(id: 'silver')
+    plan = stripe_helper.create_plan(id: 'silver', product: product.id)
     customer = Stripe::Customer.create(id: 'test_cus_plan', source: gen_card_tk, :plan => 'silver')
 
     customer = Stripe::Customer.retrieve('test_cus_plan')
@@ -92,23 +94,29 @@ shared_examples 'Customer API' do
   end
 
   it "creates a customer with a plan (string/symbol agnostic)" do
-    plan = stripe_helper.create_plan(id: 'string_id')
-    customer = Stripe::Customer.create(id: 'test_cus_plan', source: gen_card_tk, :plan => :string_id)
+    stripe_helper.create_plan(id: 'silver', product: product.id)
 
-    customer = Stripe::Customer.retrieve('test_cus_plan')
-    expect(customer.subscriptions.first.plan.id).to eq('string_id')
+    Stripe::Customer.create(id: 'cust_SLV1', source: gen_card_tk, :plan => 'silver')
+    customer = Stripe::Customer.retrieve('cust_SLV1')
+    expect(customer.subscriptions.count).to eq(1)
+    expect(customer.subscriptions.data.length).to eq(1)
+    expect(customer.subscriptions).to_not be_nil
+    expect(customer.subscriptions.first.plan.id).to eq('silver')
+    expect(customer.subscriptions.first.customer).to eq(customer.id)
 
-    plan = stripe_helper.create_plan(:id => :sym_id)
-    customer = Stripe::Customer.create(id: 'test_cus_plan', source: gen_card_tk, :plan => 'sym_id')
-
-    customer = Stripe::Customer.retrieve('test_cus_plan')
-    expect(customer.subscriptions.first.plan.id).to eq('sym_id')
+    Stripe::Customer.create(id: 'cust_SLV2', source: gen_card_tk, :plan => :silver)
+    customer = Stripe::Customer.retrieve('cust_SLV2')
+    expect(customer.subscriptions.count).to eq(1)
+    expect(customer.subscriptions.data.length).to eq(1)
+    expect(customer.subscriptions).to_not be_nil
+    expect(customer.subscriptions.first.plan.id).to eq('silver')
+    expect(customer.subscriptions.first.customer).to eq(customer.id)
   end
 
   context "create customer" do
 
     it "with a trial when trial_end is set" do
-      plan = stripe_helper.create_plan(id: 'no_trial', amount: 999)
+      plan = stripe_helper.create_plan(id: 'no_trial', product: product.id, amount: 999)
       trial_end = Time.now.utc.to_i + 3600
       customer = Stripe::Customer.create(id: 'test_cus_trial_end', source: gen_card_tk, plan: 'no_trial', trial_end: trial_end)
 
