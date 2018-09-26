@@ -129,4 +129,33 @@ shared_examples "Product API" do
     end
   end
 
+ describe "Mock Data" do
+    let(:mock_object) { StripeMock::Data.mock_product }
+    let(:known_attributes) { [
+      :id,
+      :object,
+      :active,
+      :attributes,
+      :caption,
+      :created,
+      :deactivate_on,
+      :description,
+      :images,
+      :livemode,
+      :metadata,
+      :name,
+      :package_dimensions,
+      :shippable,
+      :statement_descriptor,
+      :type,
+      :unit_label,
+      :updated,
+      :url
+    ] }
+
+    it "includes all retreived attributes" do
+      expect(mock_object.keys).to eql(known_attributes)
+    end
+  end
+
 end

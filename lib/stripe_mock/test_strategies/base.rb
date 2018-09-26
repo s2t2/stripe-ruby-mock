@@ -36,14 +36,7 @@ module StripeMock
 
       def create_plan_params(params={})
         currency = params[:currency] || StripeMock.default_currency
-        product_id = params[:product] # || create_product.id
-        #unless product_id
-        #  binding.pry
-        #  product_id = new_id("prod") # avoid uniquness error / duplicative ids
-        #  # BUT #new_id IS IN THE SERVER INSTANCE. HOW TO ACCESS IT????
-        #  puts "CREATING PRODUCT #{product_id}"
-        #  #product = create_product(id: product_id) # satisfy association validation
-        #end
+        product_id = params[:product]
 
         {
           :id => 'stripe_mock_default_plan_id',
@@ -53,24 +46,6 @@ module StripeMock
           :amount => 1337
         }.merge(params)
       end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       #
       # CARD TOKEN

@@ -207,4 +207,33 @@ shared_examples 'Plan API' do
 
   end
 
+  describe "Mock Data" do
+    let(:mock_object) { StripeMock::Data.mock_plan }
+    let(:known_attributes) { [
+      :id,
+      :object,
+      :active,
+      :aggregate_usage,
+      :amount,
+      :billing_scheme,
+      :created,
+      :currency,
+      :interval,
+      :interval_count,
+      :livemode,
+      :metadata,
+      :nickname,
+      :product,
+      :tiers,
+      :tiers_mode,
+      :transform_usage,
+      :trial_period_days,
+      :usage_type
+    ] }
+
+    it "includes all retreived attributes" do
+      expect(mock_object.keys).to eql(known_attributes)
+    end
+  end
+
 end
