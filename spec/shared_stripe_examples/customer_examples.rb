@@ -132,7 +132,7 @@ shared_examples 'Customer API' do
     end
 
     it 'overrides trial period length when trial_end is set' do
-      plan = stripe_helper.create_plan(id: 'silver', amount: 999, trial_period_days: 14)
+      plan = stripe_helper.create_plan(id: 'silver', product: product.id, amount: 999, trial_period_days: 14)
       trial_end = Time.now.utc.to_i + 3600
       customer = Stripe::Customer.create(id: 'test_cus_trial_end', source: gen_card_tk, plan: 'silver', trial_end: trial_end)
 
@@ -147,7 +147,7 @@ shared_examples 'Customer API' do
     end
 
     it 'creates a customer when trial_end is set and no source', live: true do
-      plan = stripe_helper.create_plan(id: 'silver', amount: 999)
+      plan = stripe_helper.create_plan(id: 'silver', product: product.id, amount: 999)
       trial_end = Time.now.utc.to_i + 3600
       customer = Stripe::Customer.create(plan: 'silver', trial_end: trial_end)
       expect(customer.subscriptions.count).to eq(1)
@@ -160,7 +160,7 @@ shared_examples 'Customer API' do
     end
 
     it "returns no trial when trial_end is set to 'now'" do
-      plan = stripe_helper.create_plan(id: 'silver', amount: 999, trial_period_days: 14)
+      plan = stripe_helper.create_plan(id: 'silver', product: product.id, amount: 999, trial_period_days: 14)
       customer = Stripe::Customer.create(id: 'test_cus_trial_end', source: gen_card_tk, plan: 'silver', trial_end: "now")
 
       customer = Stripe::Customer.retrieve('test_cus_trial_end')
@@ -175,7 +175,7 @@ shared_examples 'Customer API' do
     end
 
     it "returns an error if trial_end is set to a past time" do
-      plan = stripe_helper.create_plan(id: 'silver', amount: 999)
+      plan = stripe_helper.create_plan(id: 'silver', product: product.id, amount: 999)
       expect {
         Stripe::Customer.create(id: 'test_cus_trial_end', source: gen_card_tk, plan: 'silver', trial_end: Time.now.utc.to_i - 3600)
       }.to raise_error {|e|
@@ -205,7 +205,7 @@ shared_examples 'Customer API' do
   end
 
   it 'cannot create a customer with an existing plan, but no card token' do
-    plan = stripe_helper.create_plan(id: 'p')
+    plan = stripe_helper.create_plan(id: 'p', product: product.id)
     expect {
       customer = Stripe::Customer.create(id: 'test_cus_no_plan', :plan => 'p')
     }.to raise_error {|e|
@@ -389,7 +389,7 @@ shared_examples 'Customer API' do
   end
 
   it "still has subscriptions after save when subscriptions unchanged" do
-    plan = stripe_helper.create_plan(id: 'silver')
+    plan = stripe_helper.create_plan(id: 'silver', product: product.id)
     original = Stripe::Customer.create(source: gen_card_tk, plan: 'silver')
     subscription = original.subscriptions.data.first
     subscription_id = subscription.id
@@ -402,7 +402,7 @@ shared_examples 'Customer API' do
   end
 
   it "should add a customer to a subscription" do
-    plan     = stripe_helper.create_plan(id: 'silver')
+    plan     = stripe_helper.create_plan(id: 'silver', product: product.id)
     customer = Stripe::Customer.create(source: gen_card_tk)
     customer.subscriptions.create(plan: plan.id)
 
@@ -416,7 +416,7 @@ shared_examples 'Customer API' do
   end
 
   it 'works with the update_subscription method' do
-    stripe_helper.create_plan(id: 'silver')
+    stripe_helper.create_plan(id: 'silver', product: product.id)
     cus   = Stripe::Customer.create(source: gen_card_tk)
     expect {
       cus.update_subscription(plan: 'silver')
