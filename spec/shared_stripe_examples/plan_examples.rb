@@ -167,20 +167,20 @@ shared_examples 'Plan API' do
     describe "Inclusion" do
       let(:invalid_interval) { "OOPS" }
       let(:invalid_interval_message) { validator.invalid_plan_interval_message }
+      let(:invalid_interval_params) { params.merge({interval: invalid_interval}) }
+      let(:plan_with_invalid_interval) { Stripe::Plan.create(invalid_interval_params) }
 
-      it "validates inclusion of interval in a supported list'" do
-        expect {
-          Stripe::Plan.create( params.merge({interval: invalid_interval}) )
-        }.to raise_error(Stripe::InvalidRequestError, invalid_interval_message)
+      it "validates inclusion of interval" do
+        expect { plan_with_invalid_interval }.to raise_error(Stripe::InvalidRequestError, invalid_interval_message)
       end
 
       let(:invalid_currency) { "OOPS" }
       let(:invalid_currency_message) { validator.invalid_currency_message(invalid_currency) }
+      let(:invalid_currency_params) { params.merge({currency: invalid_currency}) }
+      let(:plan_with_invalid_currency) { Stripe::Plan.create(invalid_interval_params) }
 
-      it "validates inclusion of currency in a supported list" do
-        expect {
-          Stripe::Plan.create( params.merge({currency: invalid_currency}) )
-        }.to raise_error(Stripe::InvalidRequestError, invalid_currency_message)
+      it "validates inclusion of currency" do
+        expect { plan_with_invalid_currency }.to raise_error(Stripe::InvalidRequestError, invalid_currency_message)
       end
     end
 

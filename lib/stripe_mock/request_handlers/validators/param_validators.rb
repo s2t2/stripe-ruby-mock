@@ -92,13 +92,18 @@ module StripeMock
           raise Stripe::InvalidRequestError.new(already_exists_message(Stripe::Plan), :id)
         end
 
-        unless params[:amount].integer?
-          raise Stripe::InvalidRequestError.new(invalid_integer_message(params[:amount]), :amount)
+        unless SUPPORTED_PLAN_INTERVALS.include?(params[:interval])
+          raise Stripe::InvalidRequestError.new(invalid_plan_interval_message, :interval)
         end
 
         unless SUPPORTED_CURRENCIES.include?(params[:currency])
           raise Stripe::InvalidRequestError.new(invalid_currency_message(params[:currency]), :currency)
         end
+
+        unless params[:amount].integer?
+          raise Stripe::InvalidRequestError.new(invalid_integer_message(params[:amount]), :amount)
+        end
+
       end
 
 
