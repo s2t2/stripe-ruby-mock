@@ -35,16 +35,21 @@ module StripeMock
       end
 
       def create_plan_params(params={})
-        currency = params[:currency] || StripeMock.default_currency
-        product_id = params[:product]
-
         {
           :id => 'stripe_mock_default_plan_id',
           :interval => 'month',
-          :currency => currency,
-          :product => product_id,
+          :currency => StripeMock.default_currency,
+          :product => nil, # need to override yourself to pass validations
           :amount => 1337
         }.merge(params)
+      end
+
+      #
+      # SUBSCRIPTION
+      #
+
+      def list_subscriptions(limit)
+        Stripe::Subscription.list(limit: limit)
       end
 
       #
