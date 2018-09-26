@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 shared_examples 'Customer API' do
-  let(:product_id){ "prod_CCC" }
-  let(:product) { Stripe::Product.create(id: product_id, name: "My Product", type: "service") }
+  let(:product_params) { {id: "prod_CCC", name: "My Product", type: "service"} }
+  let(:product) { stripe_helper.find_or_create_product(product_params) }
 
   def gen_card_tk
     stripe_helper.generate_card_token
