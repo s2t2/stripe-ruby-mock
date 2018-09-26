@@ -25,6 +25,10 @@ shared_examples 'Plan API' do
   let(:plan_attributes_with_metadata) { plan_attributes.merge(id: "prod_META", metadata: metadata) }
   let(:plan_with_metadata) { Stripe::Plan.create(plan_attributes_with_metadata) }
 
+  before(:each) do
+    product
+  end
+
   it "creates a stripe plan" do
     expect(plan.id).to eq('plan_abc123')
     expect(plan.nickname).to eq('My Mock Plan')
@@ -117,21 +121,21 @@ shared_examples 'Plan API' do
     expect(all.count).to eq(100)
   end
 
-  describe "Validations", :live => true do
+  describe "Validations", :live => true do # what's up with live: true ?
     let(:params) { stripe_helper.create_plan_params(product: product_id) }
     let(:subject) { Stripe::Plan.create(params) }
-
-    class MyValidator # :-D
-      include StripeMock::RequestHandlers::ParamValidators
-    end
-
-    let(:validator) { MyValidator.new }
+    class MyValidator ; include StripeMock::RequestHandlers::ParamValidators ; end
+    let(:validator) { MyValidator.new } # :-D
 
     describe "Associations" do
-      let(:not_found_message) { validator.not_found_message(Stripe::Product, plan_attributes[:product]) }
+      let(:not_found_product_id){ "prod_NONEXIST" }
+      let(:not_found_message) { validator.not_found_message(Stripe::Product, not_found_product_id) }
+      let(:params) { stripe_helper.create_plan_params(product: not_found_product_id) }
+      let(:products) { stripe_helper.list_products(100).data }
 
       it "validates associated product" do
-        expect { plan }.to raise_error(Stripe::InvalidRequestError, not_found_message)
+        expect(products.map(&:id)).to_not include(not_found_product_id)
+        expect { subject }.to raise_error(Stripe::InvalidRequestError, not_found_message)
       end
     end
 

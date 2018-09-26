@@ -2,6 +2,14 @@ module StripeMock
   module TestStrategies
     class Base
 
+      #
+      # PRODUCT
+      #
+
+      def list_products(limit)
+        Stripe::Product.list(limit: limit)
+      end
+
       def create_product(params = {})
         Stripe::Product.create create_product_params(params)
       end
@@ -14,6 +22,14 @@ module StripeMock
         }.merge(params)
       end
 
+      #
+      # PLAN
+      #
+
+      def list_plans(limit)
+        Stripe::Plan.list(limit: limit)
+      end
+
       def create_plan(params={})
         Stripe::Plan.create create_plan_params(params)
       end
@@ -23,7 +39,8 @@ module StripeMock
         product_id = params[:product] # || create_product.id
         #unless product_id
         #  binding.pry
-        #  product_id = new_id("prod")
+        #  product_id = new_id("prod") # avoid uniquness error / duplicative ids
+        #  # BUT #new_id IS IN THE SERVER INSTANCE. HOW TO ACCESS IT????
         #  puts "CREATING PRODUCT #{product_id}"
         #  #product = create_product(id: product_id) # satisfy association validation
         #end
@@ -36,6 +53,28 @@ module StripeMock
           :amount => 1337
         }.merge(params)
       end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      #
+      # CARD TOKEN
+      #
 
       def generate_card_token(card_params={})
         card_data = { :number => "4242424242424242", :exp_month => 9, :exp_year => 2018, :cvc => "999", :tokenization_method => nil }
@@ -61,6 +100,10 @@ module StripeMock
         stripe_token = Stripe::Token.create(:bank_account => bank_account)
         stripe_token.id
       end
+
+      #
+      # COUPON
+      #
 
       def create_coupon_params(params = {})
         currency = params[:currency] || StripeMock.default_currency
@@ -98,6 +141,7 @@ module StripeMock
       def prepare_card_error
         StripeMock.prepare_card_error(:card_error, :new_customer) if StripeMock.state == 'local'
       end
+
     end
   end
 end
