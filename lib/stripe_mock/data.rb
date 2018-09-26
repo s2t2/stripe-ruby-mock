@@ -501,6 +501,7 @@ module StripeMock
         currency: currency,
         interval: "month",
         interval_count: 1,
+        # product
         livemode: false,
         metadata: {},
         nickname: "My Mock Plan",

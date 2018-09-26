@@ -1,32 +1,37 @@
 require 'spec_helper'
 
 shared_examples 'Plan API' do
-  let(:product_attributes){ {id: "prod_abc123", name: "My Mock Product", type: "service"} }
+  let(:product_id) { "prod_abc123" }
+  let(:product_attributes){ {id: product_id, name: "My Mock Product", type: "service"} }
   let(:product) { Stripe::Product.create(product_attributes) }
+
   let(:plan_attributes) { {
     :id => "plan_abc123",
-    :product => product_attributes[:id],
+    :product => product_id,
     :nickname => "My Mock Plan",
     :amount => 9900,
     :currency => "usd",
-    :interval => "month",
-
+    :interval => "month"
   } }
-  let(:plan_attributes_without_id){ plan_attributes.merge({id: nil}) }
-  let(:plan_without_id){ Stripe::Plan.create(plan_attributes_without_id) }
   let(:plan) { Stripe::Plan.create(plan_attributes) }
-  let(:plan_attributes_with_trial) { plan_attributes.merge({:trial_period_days => 30}) }
+
+  let(:plan_attributes_without_id){ plan_attributes.merge(id: nil) }
+  let(:plan_without_id){ Stripe::Plan.create(plan_attributes_without_id) }
+
+  let(:plan_attributes_with_trial) { plan_attributes.merge(id: "prod_TRIAL", :trial_period_days => 30) }
   let(:plan_with_trial) { Stripe::Plan.create(plan_attributes_with_trial) }
-  let(:plan_attributes_with_metadata) { plan_attributes.merge({:description => "desc text", :info => "info text"}) }
+
+  let(:metadata) { {:description => "desc text", :info => "info text"} }
+  let(:plan_attributes_with_metadata) { plan_attributes.merge(id: "prod_META", metadata: metadata) }
   let(:plan_with_metadata) { Stripe::Plan.create(plan_attributes_with_metadata) }
 
   it "creates a stripe plan" do
-    expect(plan.id).to eq('prod_abc123')
+    expect(plan.id).to eq('plan_abc123')
     expect(plan.nickname).to eq('My Mock Plan')
     expect(plan.amount).to eq(9900)
 
     expect(plan.currency).to eq('usd')
-    expect(plan.interval).to eq(1)
+    expect(plan.interval).to eq("month")
 
     expect(plan_with_metadata.metadata.description).to eq('desc text')
     expect(plan_with_metadata.metadata.info).to eq('info text')
@@ -40,32 +45,18 @@ shared_examples 'Plan API' do
   end
 
   it "stores a created stripe plan in memory" do
-    plan = Stripe::Plan.create(
-      :id => 'pid_2',
-      :product => 'prod_222',
-      :name => 'The Second Plan',
-      :amount => 1100,
-      :currency => 'USD',
-      :interval => 1
-    )
-    plan2 = Stripe::Plan.create(
-      :id => 'pid_3',
-      :product => 'prod_333',
-      :name => 'The Third Plan',
-      :amount => 7777,
-      :currency => 'USD',
-      :interval => 1
-    )
+    plan
+    plan2 = Stripe::Plan.create(plan_attributes.merge(id: "plan_def456", amount: 299))
+
     data = test_data_source(:plans)
     expect(data[plan.id]).to_not be_nil
-    expect(data[plan.id][:amount]).to eq(1100)
-
+    expect(data[plan.id][:amount]).to eq(9900)
     expect(data[plan2.id]).to_not be_nil
-    expect(data[plan2.id][:amount]).to eq(7777)
+    expect(data[plan2.id][:amount]).to eq(299)
   end
 
   it "retrieves a stripe plan" do
-    original = stripe_helper.create_plan(amount: 1331)
+    original = stripe_helper.create_plan(product: product_id, amount: 1331)
     plan = Stripe::Plan.retrieve(original.id)
 
     expect(plan.id).to eq(original.id)
@@ -73,7 +64,7 @@ shared_examples 'Plan API' do
   end
 
   it "updates a stripe plan" do
-    stripe_helper.create_plan(id: 'super_member', amount: 111)
+    stripe_helper.create_plan(id: 'super_member', product: product_id, amount: 111)
 
     plan = Stripe::Plan.retrieve('super_member')
     expect(plan.amount).to eq(111)
@@ -93,7 +84,7 @@ shared_examples 'Plan API' do
   end
 
   it "deletes a stripe plan" do
-    stripe_helper.create_plan(id: 'super_member', amount: 111)
+    stripe_helper.create_plan(id: 'super_member', product: product_id, amount: 111)
 
     plan = Stripe::Plan.retrieve('super_member')
     expect(plan).to_not be_nil
@@ -108,8 +99,8 @@ shared_examples 'Plan API' do
   end
 
   it "retrieves all plans" do
-    stripe_helper.create_plan(id: 'Plan One', amount: 54321)
-    stripe_helper.create_plan(id: 'Plan Two', amount: 98765)
+    stripe_helper.create_plan(id: 'Plan One', product: product_id, amount: 54321)
+    stripe_helper.create_plan(id: 'Plan Two', product: product_id, amount: 98765)
 
     all = Stripe::Plan.all
     expect(all.count).to eq(2)
@@ -119,7 +110,7 @@ shared_examples 'Plan API' do
 
   it 'retrieves plans with limit' do
     101.times do | i|
-      stripe_helper.create_plan(id: "Plan #{i}", amount: 11)
+      stripe_helper.create_plan(id: "Plan #{i}", product: product_id, amount: 11)
     end
     all = Stripe::Plan.all(limit: 100)
 
@@ -127,7 +118,7 @@ shared_examples 'Plan API' do
   end
 
   describe "Validations", :live => true do
-    let(:params) { stripe_helper.create_plan_params }
+    let(:params) { stripe_helper.create_plan_params(product: product_id) }
     let(:subject) { Stripe::Plan.create(params) }
 
     class MyValidator # :-D
@@ -137,7 +128,7 @@ shared_examples 'Plan API' do
     let(:validator) { MyValidator.new }
 
     describe "Associations" do
-      let(:not_found_message) { validator.not_found_message(Stripe::Plan, plan_attributes[:product]) }
+      let(:not_found_message) { validator.not_found_message(Stripe::Product, plan_attributes[:product]) }
 
       it "validates associated product" do
         expect { plan }.to raise_error(Stripe::InvalidRequestError, not_found_message)
@@ -168,6 +159,10 @@ shared_examples 'Plan API' do
       let(:invalid_interval_params) { params.merge({interval: invalid_interval}) }
       let(:plan_with_invalid_interval) { Stripe::Plan.create(invalid_interval_params) }
 
+      before(:each) do
+        product
+      end
+
       it "validates inclusion of interval" do
         expect { plan_with_invalid_interval }.to raise_error(Stripe::InvalidRequestError, invalid_interval_message)
       end
@@ -175,7 +170,7 @@ shared_examples 'Plan API' do
       let(:invalid_currency) { "OOPS" }
       let(:invalid_currency_message) { validator.invalid_currency_message(invalid_currency) }
       let(:invalid_currency_params) { params.merge({currency: invalid_currency}) }
-      let(:plan_with_invalid_currency) { Stripe::Plan.create(invalid_interval_params) }
+      let(:plan_with_invalid_currency) { Stripe::Plan.create(invalid_currency_params) }
 
       it "validates inclusion of currency" do
         expect { plan_with_invalid_currency }.to raise_error(Stripe::InvalidRequestError, invalid_currency_message)

@@ -2,6 +2,10 @@ module StripeMock
   module TestStrategies
     class Base
 
+      def create_product(params = {})
+        Stripe::Product.create create_product_params(params)
+      end
+
       def create_product_params(params={})
         {
           :id => 'stripe_mock_default_product_id',
@@ -10,16 +14,26 @@ module StripeMock
         }.merge(params)
       end
 
+      def create_plan(params={})
+        Stripe::Plan.create create_plan_params(params)
+      end
+
       def create_plan_params(params={})
         currency = params[:currency] || StripeMock.default_currency
+        product_id = params[:product] # || create_product.id
+        #unless product_id
+        #  binding.pry
+        #  product_id = new_id("prod")
+        #  puts "CREATING PRODUCT #{product_id}"
+        #  #product = create_product(id: product_id) # satisfy association validation
+        #end
+
         {
           :id => 'stripe_mock_default_plan_id',
-          :product => {
-            :name => 'StripeMock Default Plan ID'
-          }, # :product => "prod_abc123",
-          :amount => 1337,
+          :interval => 'month',
           :currency => currency,
-          :interval => 'month'
+          :product => product_id,
+          :amount => 1337
         }.merge(params)
       end
 
