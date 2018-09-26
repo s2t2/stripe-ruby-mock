@@ -22,6 +22,19 @@ module StripeMock
         }.merge(params)
       end
 
+      def find_or_create_product(params)
+        product_id = params[:id]
+        begin
+          retrieve_product(product_id)
+        rescue Stripe::InvalidRequestError => e
+          create_product(params) if e.message == "No such product: #{product_id}"
+        end
+      end
+
+      def retrieve_product(product_id)
+        Stripe::Product.retrieve(product_id)
+      end
+
       #
       # PLAN
       #
