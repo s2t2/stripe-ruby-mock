@@ -121,15 +121,14 @@ shared_examples 'Plan API' do
     expect(all.count).to eq(100)
   end
 
-  describe "Validations", :live => true do # what's up with live: true ?
+  describe "Validations", :live => true do
+    include_context "stripe validator"
     let(:params) { stripe_helper.create_plan_params(product: product_id) }
     let(:subject) { Stripe::Plan.create(params) }
-    class MyValidator ; include StripeMock::RequestHandlers::ParamValidators ; end
-    let(:validator) { MyValidator.new } # :-D
 
     describe "Associations" do
       let(:not_found_product_id){ "prod_NONEXIST" }
-      let(:not_found_message) { validator.not_found_message(Stripe::Product, not_found_product_id) }
+      let(:not_found_message) { stripe_validator.not_found_message(Stripe::Product, not_found_product_id) }
       let(:params) { stripe_helper.create_plan_params(product: not_found_product_id) }
       let(:products) { stripe_helper.list_products(100).data }
 
@@ -159,7 +158,7 @@ shared_examples 'Plan API' do
 
     describe "Inclusion" do
       let(:invalid_interval) { "OOPS" }
-      let(:invalid_interval_message) { validator.invalid_plan_interval_message }
+      let(:invalid_interval_message) { stripe_validator.invalid_plan_interval_message }
       let(:invalid_interval_params) { params.merge({interval: invalid_interval}) }
       let(:plan_with_invalid_interval) { Stripe::Plan.create(invalid_interval_params) }
 
@@ -172,7 +171,7 @@ shared_examples 'Plan API' do
       end
 
       let(:invalid_currency) { "OOPS" }
-      let(:invalid_currency_message) { validator.invalid_currency_message(invalid_currency) }
+      let(:invalid_currency_message) { stripe_validator.invalid_currency_message(invalid_currency) }
       let(:invalid_currency_params) { params.merge({currency: invalid_currency}) }
       let(:plan_with_invalid_currency) { Stripe::Plan.create(invalid_currency_params) }
 
@@ -183,7 +182,7 @@ shared_examples 'Plan API' do
 
     describe "Numericality" do
       let(:invalid_integer) { 99.99 }
-      let(:invalid_integer_message) { validator.invalid_integer_message(invalid_integer)}
+      let(:invalid_integer_message) { stripe_validator.invalid_integer_message(invalid_integer)}
 
       it 'validates amount is an integer' do
         expect {
@@ -193,7 +192,7 @@ shared_examples 'Plan API' do
     end
 
     describe "Uniqueness" do
-      let(:already_exists_message) { validator.already_exists_message(Stripe::Plan) }
+      let(:already_exists_message) { stripe_validator.already_exists_message(Stripe::Plan) }
 
       it "validates for uniqueness" do
         stripe_helper.delete_plan(params[:id])

@@ -95,13 +95,14 @@ shared_examples "Product API" do
   end
 
   describe "Validation", :live => true do
+    include_context "stripe validator"
     let(:params) { stripe_helper.create_product_params }
     let(:subject) { Stripe::Product.create(params) }
 
     describe "Required Parameters" do
       after do
         params.delete(@attribute_name)
-        message = "Missing required param: #{@attribute_name}." # validator.missing_param_message(@attribute_name)
+        message = stripe_validator.missing_param_message(@attribute_name)
         expect { subject }.to raise_error(Stripe::InvalidRequestError, message)
       end
 
@@ -113,18 +114,20 @@ shared_examples "Product API" do
       it "validates inclusion of type in 'good' or 'service'" do
         expect {
           Stripe::Product.create(params.merge({type: "OOPS"}))
-        }.to raise_error(Stripe::InvalidRequestError, "Invalid type: must be one of good or service") # validator.invalid_product_type_message
+        }.to raise_error(Stripe::InvalidRequestError, stripe_validator.invalid_product_type_message)
       end
     end
 
     describe "Uniqueness" do
+      let(:already_exists_message){ stripe_validator.already_exists_message(Stripe::Product) }
+
       it "validates uniqueness of identifier" do
         stripe_helper.delete_product(params[:id])
 
         Stripe::Product.create(params)
         expect {
           Stripe::Product.create(params)
-        }.to raise_error(Stripe::InvalidRequestError, "Product already exists.") # validator.already_exists_message(Stripe::Product)
+        }.to raise_error(Stripe::InvalidRequestError, already_exists_message)
       end
     end
   end
