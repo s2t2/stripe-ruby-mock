@@ -1,13 +1,6 @@
 require 'spec_helper'
 
 shared_examples 'Charge API' do
-  let(:charge_attrs) { {
-    amount: 1995,
-    currency: "usd",
-    #source: "tok_amex"
-    source: StripeMock.generate_card_token
-  } }
-  let(:charge) { Stripe::Charge.create(charge_attrs) }
 
   it "requires a valid card token", :live => true do
     expect {
@@ -19,7 +12,9 @@ shared_examples 'Charge API' do
     }.to raise_error(Stripe::InvalidRequestError, /token/i)
   end
 
-  it "accepts a valid card token", :live => true do
+  it "accepts a supported test card token", :live => true do
+    charge_attrs = {amount: 1995, currency: "usd", source: "tok_amex"}
+    charge = Stripe::Charge.create(charge_attrs)
     expect(charge.source).to be_kind_of(Stripe::Card)
   end
 

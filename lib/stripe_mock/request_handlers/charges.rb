@@ -12,6 +12,20 @@ module StripeMock
         klass.add_handler 'post /v1/charges/(.*)',          :update_charge
       end
 
+      # @see https://stripe.com/docs/testing#cards
+      SUPPORTED_TEST_TOKENS = [
+        "tok_visa",
+        "tok_visa_debit",
+        "tok_mastercard",
+        "tok_mastercard_debit",
+        "tok_mastercard_prepaid",
+        "tok_amex",
+        "tok_discover",
+        "tok_diners",
+        "tok_jcb",
+        "tok_unionpay"
+      ]
+
       def new_charge(route, method_url, params, headers)
         if params[:idempotency_key] && charges.any?
           original_charge = charges.values.find { |c| c[:idempotency_key] == params[:idempotency_key]}
@@ -19,7 +33,6 @@ module StripeMock
         end
 
         id = new_id('ch')
-        puts "NEW CHARGE #{id} w/ SOURCE #{params[:source]}"
 
         if params[:source]
           if params[:source].is_a?(String)
@@ -29,11 +42,11 @@ module StripeMock
             if params[:customer]
               params[:source] = get_card(customers[params[:customer]], params[:source])
             else
-
-              #puts "ADDING token"
-              #generate_card_token(params[:source])
+              if SUPPORTED_TEST_TOKENS.include?(params[:source])
+                # bypass invalid token error for supported test card tokens
+                @card_tokens[params[:source]] = Data.mock_card
+              end
               params[:source] = get_card_or_bank_by_token(params[:source])
-              #params[:source] = params[:source]
             end
           elsif params[:source][:id]
             raise Stripe::InvalidRequestError.new("Invalid token id: #{params[:source]}", 'card', http_status: 400)
