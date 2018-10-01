@@ -10,9 +10,11 @@ module StripeMock
       end
 
       def generate_card_token(card_params = {})
+        puts "GENERATING CARD TOKEN"
         token = new_id 'tok'
         card_params[:id] = new_id 'cc'
         @card_tokens[token] = Data.mock_card symbolize_names(card_params)
+        puts @card_tokens.count
         token
       end
 
@@ -36,7 +38,6 @@ module StripeMock
 
       def get_card_or_bank_by_token(token)
         token_id = token['id'] || token
-        puts "GET CARD OR BANK BY TOKEN #{token_id}"
         @card_tokens[token_id] || @bank_tokens[token_id] || raise(Stripe::InvalidRequestError.new("Invalid token id: #{token_id}", 'tok', http_status: 404))
       end
 

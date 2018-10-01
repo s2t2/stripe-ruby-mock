@@ -4,8 +4,8 @@ shared_examples 'Charge API' do
   let(:charge_attrs) { {
     amount: 1995,
     currency: "usd",
-    source: "tok_amex"
-    #source: StripeMock.generate_card_token
+    #source: "tok_amex"
+    source: StripeMock.generate_card_token
   } }
   let(:charge) { Stripe::Charge.create(charge_attrs) }
 
@@ -20,7 +20,7 @@ shared_examples 'Charge API' do
   end
 
   it "accepts a valid card token", :live => true do
-    expect(charge.source).to eql("tok_amex")
+    expect(charge.source).to be_kind_of(Stripe::Card)
   end
 
   it "requires a valid customer or source", :live => true do

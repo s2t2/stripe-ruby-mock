@@ -19,6 +19,7 @@ module StripeMock
         end
 
         id = new_id('ch')
+        puts "NEW CHARGE #{id} w/ SOURCE #{params[:source]}"
 
         if params[:source]
           if params[:source].is_a?(String)
@@ -28,7 +29,11 @@ module StripeMock
             if params[:customer]
               params[:source] = get_card(customers[params[:customer]], params[:source])
             else
+
+              #puts "ADDING token"
+              #generate_card_token(params[:source])
               params[:source] = get_card_or_bank_by_token(params[:source])
+              #params[:source] = params[:source]
             end
           elsif params[:source][:id]
             raise Stripe::InvalidRequestError.new("Invalid token id: #{params[:source]}", 'card', http_status: 400)
@@ -40,6 +45,7 @@ module StripeMock
           end
         end
 
+        puts "ENSURE REQ. PARAMS"
         ensure_required_params(params)
         bal_trans_params = { amount: params[:amount], source: id }
 
