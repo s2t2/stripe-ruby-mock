@@ -10,11 +10,9 @@ module StripeMock
       end
 
       def generate_card_token(card_params = {})
-        puts "GENERATING CARD TOKEN"
         token = new_id 'tok'
         card_params[:id] = new_id 'cc'
         @card_tokens[token] = Data.mock_card symbolize_names(card_params)
-        puts @card_tokens.count
         token
       end
 

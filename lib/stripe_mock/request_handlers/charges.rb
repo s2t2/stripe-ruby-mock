@@ -58,7 +58,6 @@ module StripeMock
           end
         end
 
-        puts "ENSURE REQ. PARAMS"
         ensure_required_params(params)
         bal_trans_params = { amount: params[:amount], source: id }
 
